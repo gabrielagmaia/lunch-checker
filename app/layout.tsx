@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Lunch Checker",
   description: "Compare Orange County school lunch menus",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#1e3a8a",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
