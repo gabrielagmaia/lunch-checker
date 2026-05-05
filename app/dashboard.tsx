@@ -160,7 +160,7 @@ function BrandHeader() {
           Lunch Checker
         </h1>
         <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Compare this week&apos;s lunch menus across Orange County FL schools.
+          Compare this week&apos;s lunch menus across Orange County public schools.
         </p>
       </div>
     </header>
@@ -289,7 +289,7 @@ function PickerView({
               Pick up to {MAX_SELECT} schools to compare
             </h2>
             <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
-              Browse {schools.length} Orange County FL schools. Choose any combination of {MAX_SELECT} to see this week&apos;s lunch menus side by side.
+  Browse {schools.length} Orange County FL schools. Choose up to {MAX_SELECT} schools to compare this week&apos;s lunch menus side by side.
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-100">
@@ -413,7 +413,7 @@ function PickerView({
             </>
           ) : (
             <>
-              <span>Compare menus</span>
+              <span>Compare selected schools</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </>
           )}
@@ -449,7 +449,7 @@ function ComparisonView({
         className="mb-6 inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-blue-900/80 shadow-sm shadow-sky-100/60 transition-colors hover:border-teal-300 hover:bg-sky-50 hover:text-teal-700 sm:mb-7"
       >
         <ArrowLeft className="h-3.5 w-3.5 text-teal-600" />
-        Back to picker
+        Back to school selection
       </button>
 
       <section className="mb-6 overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-white to-sky-50/40 shadow-sm shadow-sky-100/60 sm:mb-7">
@@ -461,7 +461,7 @@ function ComparisonView({
                 Week of {weekLabel}
               </span>
               <h2 className="mt-3 text-2xl font-bold tracking-tight text-blue-950 sm:text-3xl">
-                This week&apos;s lunch comparison
+                Weekly lunch comparison
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 {selected.length === 1
@@ -561,7 +561,7 @@ function SchoolCard({
           className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-700 transition-colors hover:text-teal-900"
         >
           <ExternalLink className="h-3.5 w-3.5" />
-          Open on MealViewer
+          View source menu
         </a>
       </div>
     </article>
@@ -784,7 +784,7 @@ function SmartInsights({
             Smart insights
           </h3>
           <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            Quick patterns we spotted across the menus you selected.
+            Helpful patterns spotted across this week&apos;s selected menus.
           </p>
         </div>
       </div>
