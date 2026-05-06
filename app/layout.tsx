@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,11 +16,14 @@ export const metadata: Metadata = {
   title: "Lunch Checker",
   description: "Compare Orange County school lunch menus",
   manifest: "/manifest.webmanifest",
-  themeColor: "#1e3a8a",
   icons: {
     icon: "/icon.png",
     apple: "/icon.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1e3a8a",
 };
 
 export default function RootLayout({

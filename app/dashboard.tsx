@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
   Salad,
   Sandwich,
   Search,
+  Share2,
   Soup,
   Sparkles,
   Utensils,
@@ -47,6 +48,34 @@ type MenuState =
   | { state: "error" };
 
 const MAX_SELECT = 3;
+const STORAGE_KEY = "lunch-checker:selected-school-slugs";
+
+function loadSavedSlugs(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((x): x is string => typeof x === "string")
+      .slice(0, MAX_SELECT);
+  } catch {
+    return [];
+  }
+}
+
+function saveSelectedSlugs(slugs: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(slugs.slice(0, MAX_SELECT)),
+    );
+  } catch {
+    // localStorage may be unavailable (private mode, quota); silently skip
+  }
+}
 
 function pickIcon(name: string): LucideIcon {
   const n = name.toLowerCase();
@@ -190,6 +219,31 @@ function DashboardBody({ schools }: { schools: SchoolSummary[] }) {
   const [view, setView] = useState<"picker" | "results">("picker");
   const [menus, setMenus] = useState<Record<string, MenuState>>({});
   const [isComparing, setIsComparing] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const saved = loadSavedSlugs();
+    if (saved.length > 0) {
+      const bySlug = new Map(schools.map((s) => [s.slug, s]));
+      const restored = saved
+        .map((slug) => bySlug.get(slug))
+        .filter((s): s is SchoolSummary => Boolean(s))
+        .slice(0, MAX_SELECT);
+      // localStorage is a client-only external system; reading it in a
+      // post-mount effect (rather than useState init) avoids SSR/hydration
+      // mismatches.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (restored.length > 0) setSelected(restored);
+    }
+    setHydrated(true);
+    // schools is provided once at mount; restoring once is intentional
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveSelectedSlugs(selected.map((s) => s.slug));
+  }, [selected, hydrated]);
 
   function toggle(school: SchoolSummary) {
     setSelected((curr) => {
@@ -289,7 +343,7 @@ function PickerView({
               Pick up to {MAX_SELECT} schools to compare
             </h2>
             <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
-  Browse {schools.length} Orange County FL schools. Choose up to {MAX_SELECT} schools to compare this week&apos;s lunch menus side by side.
+            {`Browse ${schools.length} Orange County public schools. Choose up to ${MAX_SELECT} schools to compare this week's lunch menus side by side.`}
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-100">
@@ -332,6 +386,10 @@ function PickerView({
             </div>
           </div>
         )}
+
+        <p className="mb-3 px-1 text-xs leading-relaxed text-slate-500">
+          Your last selected schools are saved on this device.
+        </p>
 
         <div className="max-h-[22rem] overflow-y-auto rounded-xl border border-sky-100 sm:max-h-[28rem]">
           {filtered.length === 0 ? (
@@ -443,14 +501,17 @@ function ComparisonView({
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={onBack}
-        className="mb-6 inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-blue-900/80 shadow-sm shadow-sky-100/60 transition-colors hover:border-teal-300 hover:bg-sky-50 hover:text-teal-700 sm:mb-7"
-      >
-        <ArrowLeft className="h-3.5 w-3.5 text-teal-600" />
-        Back to school selection
-      </button>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-7">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-blue-900/80 shadow-sm shadow-sky-100/60 transition-colors hover:border-teal-300 hover:bg-sky-50 hover:text-teal-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 text-teal-600" />
+          Back to school selection
+        </button>
+        <ShareButton selected={selected} />
+      </div>
 
       <section className="mb-6 overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-white to-sky-50/40 shadow-sm shadow-sky-100/60 sm:mb-7">
         <div className="px-5 py-6 sm:px-7 sm:py-7">
@@ -496,6 +557,74 @@ function ComparisonView({
         ))}
       </div>
     </div>
+  );
+}
+
+type ShareStatus = "idle" | "shared" | "copied" | "error";
+
+function ShareButton({ selected }: { selected: SchoolSummary[] }) {
+  const [status, setStatus] = useState<ShareStatus>("idle");
+
+  useEffect(() => {
+    if (status === "idle") return;
+    const t = setTimeout(() => setStatus("idle"), 2400);
+    return () => clearTimeout(t);
+  }, [status]);
+
+  async function handleShare() {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    const names = selected.map((s) => s.name);
+    const title = "Lunch Checker comparison";
+    const text =
+      names.length === 0
+        ? "Compare this week's school lunch menus."
+        : `This week's lunch menus for ${formatList(names)}.`;
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, text, url });
+        setStatus("shared");
+        return;
+      } catch (err) {
+        if ((err as DOMException | undefined)?.name === "AbortError") return;
+        // fall through to clipboard fallback
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus("copied");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  const label =
+    status === "shared"
+      ? "Shared!"
+      : status === "copied"
+        ? "Link copied!"
+        : status === "error"
+          ? "Couldn't copy link"
+          : "Share comparison";
+
+  const showCheck = status === "shared" || status === "copied";
+
+  return (
+    <button
+      type="button"
+      onClick={handleShare}
+      aria-live="polite"
+      className="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-blue-900/80 shadow-sm shadow-sky-100/60 transition-colors hover:border-teal-300 hover:bg-sky-50 hover:text-teal-700"
+    >
+      {showCheck ? (
+        <Check className="h-3.5 w-3.5 text-teal-600" strokeWidth={3} />
+      ) : (
+        <Share2 className="h-3.5 w-3.5 text-teal-600" />
+      )}
+      {label}
+    </button>
   );
 }
 
